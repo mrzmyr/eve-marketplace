@@ -46,8 +46,34 @@ export default marketplace({
   - **Pinned and exact names win** over `"*"` when `limit` cuts
 - **`skills.limit`**: max skills per session, default `100`
 - **`refresh`**: how often the marketplace is re-read, default `"15m"`
-- **`github.connector`**: a [Vercel Connect](https://vercel.com/docs/connect) GitHub connector, app-subject token minted per request
-- **`github.token`**: static token, fine for local development
+- **`github`**: see [Auth](#auth)
+
+## Auth
+
+Pick one. Precedence: connector, then token, then anonymous.
+
+- **Vercel Connect** (recommended on Vercel). Tokens are minted per request, nothing to rotate, works for private repos.
+
+  ```sh
+  vercel connect create github --name my-agent
+  vercel connect attach <connector-uid> --yes
+  ```
+
+  ```ts
+  github: { connector: "github/my-agent" }
+  ```
+
+- **GitHub token** (local development, other hosts). A fine-grained token with `Contents: read` on the marketplace repos.
+
+  ```ts
+  github: { token: process.env.GITHUB_TOKEN }
+  ```
+
+- **No token** (public repos only). GitHub allows **60 requests per hour** per IP. Enough for one small public marketplace with in-repo plugins, not for the official catalogs or frequent refreshes.
+
+  ```ts
+  github: {}
+  ```
 
 ## What gets loaded
 
@@ -64,7 +90,6 @@ export default marketplace({
 - **Deferred by design.** Skills never enter the system prompt. The model finds them with `eve__search` and loads them with `eve__skill`.
 - **Outages do not break turns.** A GitHub or marketplace failure is logged; the agent keeps its authored skills for that turn.
 - **Cost per refresh.** Two GitHub API calls for a marketplace with in-repo plugins, plus one per plugin hosted elsewhere. File reads hit `raw.githubusercontent.com`, cached by commit.
-- **Anonymous limit is 60 requests per hour.** Set `github.token` or `github.connector` for anything beyond a small repo.
 - **Official catalogs host most plugins in other repos.** Name the plugins you want instead of `"*"`:
 
   ```ts
